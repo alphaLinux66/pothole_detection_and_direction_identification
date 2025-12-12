@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
+const pool = require('./db');
 
 const authRoutes = require('./routes/auth');
 const potholeRoutes = require('./routes/potholes');
@@ -18,6 +19,24 @@ app.use('/potholes', potholeRoutes);
 
 app.get('/', (req, res) => {
     res.send('Pothole Detection API is running');
+});
+
+app.get('/db-test', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT NOW() AS time');
+        res.json({
+            success: true,
+            message: "Database connection OK",
+            time: result.rows[0].time
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: "Database connection FAILED",
+            error: error.message
+        });
+    }
 });
 
 app.listen(PORT, () => {
