@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: pothole_db
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  python-service:
+    build: ./python-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./python-service:/app
+
+  server:
+    build: ./server
+    environment:
+      DB_USER: postgres
+      DB_HOST: db
+      DB_NAME: pothole_db
+      DB_PASSWORD: postgrespassword
+      DB_PORT: 5432
+      JWT_SECRET: supersecretkey
+      PYTHON_SERVICE_URL: http://python-service:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - python-service
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
