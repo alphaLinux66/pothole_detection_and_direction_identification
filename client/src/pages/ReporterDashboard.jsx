@@ -252,7 +252,7 @@ const ReporterDashboard = () => {
                             {potholes.map((p) => (
                                 <div key={p.id} className="group bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden hover:bg-slate-800/60 transition-all hover:border-slate-600">
                                     <div className="h-40 overflow-hidden relative">
-                                        <img src={`http://localhost:3000${p.image_url}`} alt="Evidence" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                        <img src={`${import.meta.env.VITE_API_URL}${p.image_url}`} alt="Evidence" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                                         <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold shadow-md
                                             ${p.severity === 'High' ? 'bg-red-500 text-white' :
                                                 p.severity === 'Medium' ? 'bg-yellow-500 text-black' :
