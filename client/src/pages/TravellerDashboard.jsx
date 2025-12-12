@@ -133,30 +133,7 @@ const TravellerDashboard = () => {
         }
     };
 
-    // Polyline Decoder
-    function decodePolyline(str, precision) {
-        var index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, latitude_change, longitude_change, factor = Math.pow(10, precision || 5);
-        while (index < str.length) {
-            byte = null; shift = 0; result = 0;
-            do {
-                byte = str.charCodeAt(index++) - 63;
-                result |= (byte & 0x1f) << shift;
-                shift += 5;
-            } while (byte >= 0x20);
-            latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-            shift = result = 0;
-            do {
-                byte = str.charCodeAt(index++) - 63;
-                result |= (byte & 0x1f) << shift;
-                shift += 5;
-            } while (byte >= 0x20);
-            longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-            lat += latitude_change;
-            lng += longitude_change;
-            coordinates.push([lat / factor, lng / factor]);
-        }
-        return coordinates;
-    };
+    // Polyline Decoder function moved to bottom of file for shared usage
 
     return (
         <div className="h-screen w-screen flex flex-col bg-slate-100 relative overflow-hidden">
@@ -211,27 +188,54 @@ const TravellerDashboard = () => {
                     <MapRecenter markers={markers} routes={routes} selectedRoute={routes[selectedRouteIndex]} />
 
                     {/* Render Routes */}
-                    {routes.map((route, idx) => {
-                        const isSelected = idx === selectedRouteIndex;
-                        const decodedPath = decodePolyline(route.geometry);
+                    {/* Render Routes - Sort so selected is last (on top) */}
+                    {routes
+                        .map((route, originalIdx) => ({ route, originalIdx }))
+                        .sort((a, b) => (a.originalIdx === selectedRouteIndex ? 1 : -1))
+                        .map(({ route, originalIdx }) => {
+                            const isSelected = originalIdx === selectedRouteIndex;
+                            const decodedPath = decodePolyline(route.geometry);
 
-                        let color = '#2563eb'; // Blue (Better contrast than green)
-                        if (route.stats.score > 15) color = '#dc2626'; // Red
-                        else if (route.stats.score > 5) color = '#ca8a04'; // Dark Yellow
+                            // default base color (Risk based)
+                            let riskColor = '#2563eb'; // Blue
+                            if (route.stats.score > 15) riskColor = '#dc2626'; // Red
+                            else if (route.stats.score > 5) riskColor = '#ca8a04'; // Dark Yellow
 
-                        return (
-                            <Polyline
-                                key={idx}
-                                positions={decodedPath}
-                                color={color}
-                                weight={isSelected ? 6 : 4}
-                                opacity={isSelected ? 0.9 : 0.4}
-                                eventHandlers={{
-                                    click: () => setSelectedRouteIndex(idx)
-                                }}
-                            />
-                        );
-                    })}
+                            // Google Maps Style: Unselected = Gray, Selected = Colored
+                            const displayColor = isSelected ? riskColor : '#94a3b8'; // slate-400
+                            const displayWeight = isSelected ? 8 : 6;
+                            const displayOpacity = isSelected ? 1.0 : 0.6;
+
+                            return (
+                                <Polyline
+                                    key={originalIdx}
+                                    positions={decodedPath}
+                                    pathOptions={{
+                                        color: displayColor,
+                                        weight: displayWeight,
+                                        opacity: displayOpacity,
+                                        lineCap: 'round',
+                                        lineJoin: 'round'
+                                    }}
+                                    eventHandlers={{
+                                        click: (e) => {
+                                            L.DomEvent.stopPropagation(e); // Prevent map click
+                                            setSelectedRouteIndex(originalIdx);
+                                        },
+                                        mouseover: (e) => {
+                                            if (!isSelected) {
+                                                e.target.setStyle({ color: '#64748b', opacity: 0.9, weight: 7 }); // Darker gray on hover
+                                            }
+                                        },
+                                        mouseout: (e) => {
+                                            if (!isSelected) {
+                                                e.target.setStyle({ color: '#94a3b8', opacity: 0.6, weight: 6 }); // Reset
+                                            }
+                                        }
+                                    }}
+                                />
+                            );
+                        })}
 
                     {/* Render Potholes for Selected Route */}
                     {routes[selectedRouteIndex]?.potholes?.map((pothole, idx) => (
@@ -291,34 +295,55 @@ const MapRecenter = ({ markers, routes, selectedRoute }) => {
     const map = useMap();
 
     useEffect(() => {
-        if (routes && routes.length > 0 && selectedRoute) {
-            // If routes exist, fit bounds to the selected route geometry
-            // We need to decode the geometry again or pass the decoded path.
-            // For simplicity, let's just use the start/end markers + a bit of padding if decoding is expensive here,
-            // OR better: use the route's provided bbox if available (OSRM usually provides it),
-            // OR decode the polyline here too. Let's decode since we have the function in parent, 
-            // but to avoid prop drilling the decode function, we can rely on markers if route is too complex,
-            // or just fit to start/end markers which is usually "good enough" for zoom.
-
-            // ACTUALLY: Let's fit to Start + End markers for robust behavior
-            const bounds = L.latLngBounds([]);
-            if (markers.start) bounds.extend(markers.start);
-            if (markers.end) bounds.extend(markers.end);
-
-            if (bounds.isValid()) {
-                map.fitBounds(bounds, { padding: [50, 50] });
+        if (selectedRoute) {
+            // Decode the selected route geometry and fit bounds
+            try {
+                const decodedPath = decodePolyline(selectedRoute.geometry);
+                if (decodedPath && decodedPath.length > 0) {
+                    const bounds = L.latLngBounds(decodedPath);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                    return;
+                }
+            } catch (e) {
+                console.error("Error decoding route for zoom:", e);
             }
-        } else if (markers.start && markers.end) {
-            // If just markers (no route yet), fit to them
+        }
+
+        // Fallback: Fit to markers if no route selected or decoding failed
+        if (markers.start && markers.end) {
             const bounds = L.latLngBounds([markers.start, markers.end]);
             map.fitBounds(bounds, { padding: [100, 100], maxZoom: 15 });
         } else if (markers.start) {
-            // Just start, pan there
             map.flyTo(markers.start, 15);
         }
     }, [markers, routes, selectedRoute, map]);
 
     return null;
+};
+
+// Polyline Decoder (Moved outside for shared use)
+function decodePolyline(str, precision) {
+    var index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, latitude_change, longitude_change, factor = Math.pow(10, precision || 5);
+    while (index < str.length) {
+        byte = null; shift = 0; result = 0;
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        shift = result = 0;
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += latitude_change;
+        lng += longitude_change;
+        coordinates.push([lat / factor, lng / factor]);
+    }
+    return coordinates;
 };
 
 export default TravellerDashboard;
