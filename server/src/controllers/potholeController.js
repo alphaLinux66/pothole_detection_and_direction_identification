@@ -4,7 +4,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const path = require('path');
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || process.env.PYTHON_URL || 'http://127.0.0.1:8000';
+const PYTHON_URL = process.env.PYTHON_URL || 'http://127.0.0.1:8000';
 
 const uploadPothole = async (req, res) => {
     if (!req.file) {
@@ -20,7 +20,7 @@ const uploadPothole = async (req, res) => {
         const formData = new FormData();
         formData.append('file', fs.createReadStream(filePath));
 
-        const detectionResponse = await axios.post(`${PYTHON_SERVICE_URL}/detect`, formData, {
+        const detectionResponse = await axios.post(`${PYTHON_URL}/detect`, formData, {
             headers: {
                 ...formData.getHeaders(),
             },
@@ -37,18 +37,17 @@ const uploadPothole = async (req, res) => {
         const imageUrl = `/uploads/${req.file.filename}`;
 
         const query = `
-      INSERT INTO potholes (image_url, location, severity, confidence, detected, created_by)
-      VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), $4, $5, $6, $7)
-      RETURNING id, image_url, severity, confidence, detected
+      INSERT INTO potholes (image_url, lat, lng, severity, confidence, location, user_id)
+      VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($3, $2), 4326), $6)
+      RETURNING id, image_url, severity, confidence;
     `;
 
         const result = await db.query(query, [
             imageUrl,
-            lng,
             lat,
+            lng,
             severity,
             confidence,
-            pothole_detected,
             userId,
         ]);
 
