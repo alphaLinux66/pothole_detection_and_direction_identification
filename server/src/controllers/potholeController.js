@@ -63,12 +63,13 @@ const getMyPotholes = async (req, res) => {
     const userId = req.user.id;
     try {
         const query = `
-      SELECT id, image_url, severity, confidence, detected, created_at,
-             ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat
-      FROM potholes
-      WHERE created_by = $1
-      ORDER BY created_at DESC
-    `;
+            SELECT 
+                id, image_url, severity, confidence, created_at,
+                lat, lng
+            FROM potholes
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+        `;
         const result = await db.query(query, [userId]);
         res.json(result.rows);
     } catch (error) {
@@ -107,8 +108,10 @@ const getSafeRoutes = async (req, res) => {
 
             // Query potholes within 20m of this route
             const query = `
-                SELECT id, severity, confidence, detected, 
-                       ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat
+                SELECT 
+                    id, severity, confidence,
+                    ST_X(location::geometry) AS lng,
+                    ST_Y(location::geometry) AS lat
                 FROM potholes
                 WHERE ST_DWithin(
                     location,
