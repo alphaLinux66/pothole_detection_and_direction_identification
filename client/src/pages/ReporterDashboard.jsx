@@ -103,7 +103,7 @@ const ReporterDashboard = () => {
         }
 
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         formData.append('lat', location.lat);
         formData.append('lng', location.lng);
         formData.append('severity', severity);
