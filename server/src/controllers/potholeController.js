@@ -4,7 +4,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const path = require('path');
 
-const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://python-service:8000';
+const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || process.env.PYTHON_URL || 'http://127.0.0.1:8000';
 
 const uploadPothole = async (req, res) => {
     if (!req.file) {
