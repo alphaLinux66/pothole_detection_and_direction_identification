@@ -12,8 +12,9 @@ const PORT = process.env.PORT || 3000;
 
 // Ensure uploads directory exists
 const fs = require('fs');
-if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 app.use(cors());
