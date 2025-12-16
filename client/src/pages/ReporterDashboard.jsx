@@ -110,9 +110,7 @@ const ReporterDashboard = () => {
 
         setLoading(true);
         try {
-            await api.post('/potholes/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            await api.post('/potholes/upload', formData);
 
             // Success State
             alert('✅ Pothole reported successfully!');
