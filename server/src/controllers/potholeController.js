@@ -129,9 +129,9 @@ const getSafeRoutes = async (req, res) => {
             let lowCount = 0;
 
             potholes.forEach(p => {
-                if (p.severity === 'High') highCount++;
-                if (p.severity === 'Medium') mediumCount++;
-                if (p.severity === 'Low') lowCount++;
+                if (p.severity === 'high') highCount++;
+                if (p.severity === 'medium') mediumCount++;
+                if (p.severity === 'low') lowCount++;
             });
 
             const totalPotholes = highCount + mediumCount + lowCount;
