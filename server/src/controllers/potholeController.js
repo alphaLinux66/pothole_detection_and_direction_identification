@@ -12,7 +12,7 @@ const uploadPothole = async (req, res) => {
     }
 
     const { lat, lng } = req.body;
-    const userId = req.user.id;
+    const userId = req.user ? req.user.id : null;
     const filePath = req.file.path;
 
     try {
