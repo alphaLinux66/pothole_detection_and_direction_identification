@@ -4,3 +4,6 @@ python-multipart
 ultralytics
 opencv-python-headless
 numpy
+torch
+torchvision
+Pillow
