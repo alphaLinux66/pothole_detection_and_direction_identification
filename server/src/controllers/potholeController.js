@@ -29,7 +29,12 @@ const uploadPothole = async (req, res) => {
         const { pothole_detected, confidence, severity: detectedSeverity } = detectionResponse.data;
 
         // Prioritize manual severity if provided, otherwise use detection result
-        const severity = req.body.severity || detectedSeverity;
+        const rawSeverity = req.body.severity || detectedSeverity;
+
+        // Normalize to match DB constraint: low | medium | high
+        const severity = rawSeverity ? rawSeverity.toLowerCase() : null;
+
+        console.log('FINAL severity being inserted:', severity);
 
         // Save to DB
         // We store the file path relative to uploads directory or a public URL if we were using S3
